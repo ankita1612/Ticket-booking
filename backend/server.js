@@ -31,7 +31,7 @@ app.post("/events", async (req, res) => {
 //event lists
 app.get("/events", async (req, res) => {
   const events = await Event.find({});
-  res.json({status:'success',"events":events});
+  res.json({success:true,"events":events});
 });
 
 // availability
