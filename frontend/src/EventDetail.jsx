@@ -16,7 +16,14 @@ export default function EventDetail() {
     row: "",
     quantity: 1,
   });
-
+    const handleClear = () => {
+    setForm({
+        section: "",
+        row: "",
+        quantity: 1,
+    });
+    setMessage("");
+    };
   const fetchAvailability = async () => {
         try {
             setLoading(true);
@@ -86,22 +93,7 @@ export default function EventDetail() {
 
   return (
     <div className="container mt-4">
-      <h3 className="mb-3">Availability</h3>
-
-      <ul className="list-group mb-4">
-        {availability.map((sec) => (
-          <li className="list-group-item" key={sec.name}>
-            <strong>{sec.name}</strong>
-            <ul className="mt-2">
-              {sec.rows.map((row) => (
-                <li key={row.name}>
-                  {row.name}: {row.availableSeats} seats
-                </li>
-              ))}
-            </ul>
-          </li>
-        ))}
-      </ul>
+      
 
       <h4>Book Tickets</h4>
       {message && (
@@ -155,9 +147,30 @@ export default function EventDetail() {
         onClick={handleSubmit}
       >
         Buy Tickets
-      </button>
-
+      </button> {    }
+        <button
+            className="btn btn-secondary"
+            onClick={handleClear}
+        >
+            Clear Ticket
+        </button>
      
+     <h3 className="mb-3">Availability</h3>
+
+      <ul className="list-group mb-4">
+        {availability.map((sec) => (
+          <li className="list-group-item" key={sec.name}>
+            <strong>{sec.name}</strong>
+            <ul className="mt-2">
+              {sec.rows.map((row) => (
+                <li key={row.name}>
+                  {row.name}: {row.availableSeats} seats
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
