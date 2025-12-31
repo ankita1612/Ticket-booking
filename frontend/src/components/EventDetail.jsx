@@ -164,7 +164,7 @@ export default function EventDetail() {
             <ul className="mt-2">
               {sec.rows.map((row) => (
                 <li key={row.name}>
-                  {row.name}: {row.availableSeats} seats
+                  {row.name}: {row.availableSeats} seats avaialble
                 </li>
               ))}
             </ul>
