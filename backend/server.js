@@ -10,6 +10,8 @@ import http from "http";
 import { Server } from "socket.io";
 import connectDB from "./src/config/db.js";
 import eventRoutes from "./src/routes/event.js";
+import { fileURLToPath } from "url";
+import path from "path";
 
 const app = express();
 
@@ -32,30 +34,26 @@ export const io = new Server(server, {
 });
 
 io.on("connection", (socket) => {
-  //console.log("Socket connected:", socket.id);
-
   socket.on("join-event", (eventId) => {
     socket.join(eventId);
     console.log(`Socket ${socket.id} joined event ${eventId}`);
   });
 
   socket.on("disconnect", () => {
-    //console.log("Socket disconnected:", socket.id);
   });
 });
 
-// // Serve frontend
-// const __filename = fileURLToPath(import.meta.url);
-// const __dirname = path.dirname(__filename);
+// Serve frontend
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// const frontendPath = path.join(__dirname, "../frontend/dist");
+const frontendPath = path.join(__dirname, "../frontend/dist");
 
-// app.use(express.static(frontendPath));
+app.use(express.static(frontendPath));
 
-// app.get(/.*/, (req, res) => {
-//     res.sendFile(path.join(frontendPath, "index.html"));
-// });
+app.get(/.*/, (req, res) => {
+    res.sendFile(path.join(frontendPath, "index.html"));
+});
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  //console.log(`Listening on ${PORT}`);
 });

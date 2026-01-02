@@ -113,7 +113,7 @@ export default function EventDetail() {
       {message && (
         <div className="alert alert-info mt-3">{message}</div>
       )}
-      {/* Section */}
+      
       <select
         className="form-select mb-2"
         name="section"
@@ -127,8 +127,7 @@ export default function EventDetail() {
           </option>
         ))}
       </select>
-
-      {/* Row */}
+      
       <select
         className="form-select mb-2"
         name="row"
@@ -144,9 +143,7 @@ export default function EventDetail() {
         ))}
       </select>
 
-      {/* Quantity */}
-      
-        <input
+      <input
         type="number"
         className="form-control mb-3"
         name="quantity"
