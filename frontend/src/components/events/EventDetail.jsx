@@ -102,7 +102,7 @@ export default function EventDetail() {
           quantity: Number(data.quantity),
         }
       );
-      if(res.success==true){
+      if(res.data.success==true){
         setMessage(
           res.data.data?.groupDiscount
             ? "Booked! Group discount applied"
@@ -111,9 +111,6 @@ export default function EventDetail() {
         reset();
         fetchAvailability();
       }
-      
-
-      
     } catch (err) {      
       if (err.response?.status === 422 && err.response?.data?.errors) {
           setMessage(err.response.data.errors[0].msg);
