@@ -102,17 +102,24 @@ export default function EventDetail() {
           quantity: Number(data.quantity),
         }
       );
+      if(res.success==true){
+        setMessage(
+          res.data.data?.groupDiscount
+            ? "Booked! Group discount applied"
+            : "Booked successfully"
+        );
+        reset();
+        fetchAvailability();
+      }
+      
 
-      setMessage(
-        res.data.data?.groupDiscount
-          ? "Booked! Group discount applied"
-          : "Booked successfully"
-      );
-
-      reset();
-      fetchAvailability();
-    } catch (err) {
-      setMessage(err.response?.data?.message || "Booking failed");
+      
+    } catch (err) {      
+      if (err.response?.status === 422 && err.response?.data?.errors) {
+          setMessage(err.response.data.errors[0].msg);
+        } else {
+          setMessage(err.response?.data?.message || "Booking failed");
+        }
     }
   };
 
@@ -122,12 +129,11 @@ export default function EventDetail() {
 
   return (
     <div className="container my-5">
-      <div className="row">
-        {/* LEFT — BOOK TICKETS */}
+      <div className="row">        
         <div className="col-lg-6 mb-4">
           <div className="card shadow-sm h-100">
             <div className="card-body">
-              <h4 className="fw-bold mb-3">Book Tickets</h4>
+              <h4 className="fw-bold mb-3">Book Event Tickets</h4>
 
               {message && (
                 <div className="alert alert-info">{message}</div>
@@ -216,29 +222,80 @@ export default function EventDetail() {
         <div className="col-lg-6 mb-4">
           <div className="card shadow-sm h-100">
             <div className="card-body">
-              <h4 className="fw-bold mb-3">Availability</h4>
+              <h4 className="fw-bold mb-3">
+                <i className="fa-solid fa-chair me-2 text-primary"></i>
+                Seat Availability
+              </h4>
 
-              <ul className="list-group list-group-flush">
-                {availability.map((sec) => (
-                  <li key={sec.id} className="list-group-item">
-                    <strong>{sec.name}</strong>
-                    <ul className="mt-2 ps-3">
-                      {sec.rows.map((row) => (
-                        <li key={row.id} className="text-muted">
-                          {row.name} —{" "}
-                          <span className="fw-semibold">
-                            {row.availableSeats}
-                          </span>{" "}
-                          seats available
-                        </li>
-                      ))}
-                    </ul>
-                  </li>
-                ))}
-              </ul>
+              <p className="text-muted mb-4">
+                Live availability by section and row
+              </p>
+
+              {availability.length === 0 ? (
+                <p className="text-muted">No availability data</p>
+              ) : (
+                availability.map((sec) => (
+                  <div
+                    key={sec.id}
+                    className="border rounded p-3 mb-3"
+                  >
+                    {/* Section Header */}
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                      <h6 className="fw-bold mb-0">
+                        <i className="fa-solid fa-layer-group me-2 text-secondary"></i>
+                        {sec.name}
+                      </h6>
+
+                      <span className="badge bg-light text-dark">
+                        {sec.rows.reduce(
+                          (sum, r) => sum + r.availableSeats,
+                          0
+                        )}{" "}
+                        seats avaiable
+                      </span>
+                    </div>
+
+                    {/* Rows */}
+                    <div className="row g-2">
+                      {sec.rows.map((row) => {
+                        const isSoldOut = row.availableSeats === 0;
+
+                        return (
+                          <div key={row.id} className="col-6 col-md-4">
+                            <div
+                              className={`border rounded p-2 text-center ${
+                                isSoldOut
+                                  ? "bg-light text-muted"
+                                  : "bg-success bg-opacity-10"
+                              }`}
+                            >
+                              <div className="fw-semibold">
+                                {row.name}
+                              </div>
+
+                              <small
+                                className={`fw-bold ${
+                                  isSoldOut
+                                    ? "text-danger"
+                                    : "text-success"
+                                }`}
+                              >
+                                {isSoldOut
+                                  ? "Sold Out"
+                                  : `${row.availableSeats} seats`}
+                              </small>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );

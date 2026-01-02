@@ -70,7 +70,6 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <nav>
           <ul className="pagination justify-content-center">

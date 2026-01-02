@@ -1,5 +1,6 @@
 import Event from "../../models/Event.js"
 import { io } from "../../../server.js";
+import { validationResult } from "express-validator";
 
 // create event
 export const createEvent =  async (req, res) => {
@@ -49,7 +50,7 @@ export const listEvent = async (req, res) => {
 export const availability = async (req, res) => {
   try {
     const event = await Event.findById(req.params.id).lean();
-    if (!event) return res.status(404).json({ message: "Event not found" });
+    if (!event) return res.status(404).json({ message: "Event not found",success: false});
 
     res.json(event.sections.map((sec) => ({
       id: sec._id,
@@ -67,6 +68,10 @@ export const availability = async (req, res) => {
 
 export const purchase = async (req, res) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(422).json({success: false,errors: errors.array()});
+    }
     const { section_id, row_id, quantity } = req.body;
     const eventId = req.params.id;
 
