@@ -14,11 +14,34 @@ export const createEvent =  async (req, res) => {
 //event lists
 export const listEvent = async (req, res) => {
   try {
-    const events = await Event.find({}).sort({ _id: -1 });
-    return res.status(200).json({success: true,"data":events});
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 6;
+    const skip = (page - 1) * limit;
+
+    const [events, totalEvents] = await Promise.all([
+      Event.find({})
+        .sort({ _id: -1 })
+        .skip(skip)
+        .limit(limit),
+      Event.countDocuments()
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      data: events,
+      pagination: {
+        totalEvents,
+        totalPages: Math.ceil(totalEvents / limit),
+        currentPage: page,
+        limit
+      }
+    });
   } catch (error) {
     console.error("Error fetching events:", error);
-    return res.status(500).json({success: false,message: "Failed to fetch events"});
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch events"
+    });
   }
 };
 
@@ -29,9 +52,11 @@ export const availability = async (req, res) => {
     if (!event) return res.status(404).json({ message: "Event not found" });
 
     res.json(event.sections.map((sec) => ({
-      name: sec.name,
+      id: sec._id,
+      name: sec.name,      
       rows: sec.rows.map((row) => ({
-        name: row.name,
+        id: row._id,
+        name: row.name,        
         availableSeats: row.totalSeats - row.bookedSeats,
       })),
     })));
@@ -40,16 +65,15 @@ export const availability = async (req, res) => {
   }
 };
 
-//purchase
 export const purchase = async (req, res) => {
   try {
-    const { section, row, quantity } = req.body;    
+    const { section_id, row_id, quantity } = req.body;
     const eventId = req.params.id;
 
-    if (!section || !row || !quantity) {
+    if (!section_id || !row_id || !quantity) {
       return res.status(400).json({
         success: false,
-        message: "section, row and quantity are required"
+        message: "section_id, row_id and quantity are required"
       });
     }
 
@@ -57,29 +81,38 @@ export const purchase = async (req, res) => {
     if (isNaN(qty) || qty <= 0) {
       return res.status(400).json({
         success: false,
-        message: "quantity must be a positive number"
+        message: "Quantity must be a positive number"
       });
     }
 
-    const eventCheck = await Event.findOne({
+    const event = await Event.findOne({
       _id: eventId,
-      sections: {
-        $elemMatch: {
-          name: section,
-          rows: { $elemMatch: { name: row } }
-        }
-      }
+      "sections._id": section_id,
+      "sections.rows._id": row_id
     });
 
-    if (!eventCheck) {
+    if (!event) {
       return res.status(404).json({
         success: false,
         message: "Invalid section or row"
       });
     }
 
-    const sectionDoc = eventCheck.sections.find(s => s.name === section);
-    const rowDoc = sectionDoc.rows.find(r => r.name === row);
+    const sectionDoc = event.sections.id(section_id);
+    if (!sectionDoc) {
+      return res.status(404).json({
+        success: false,
+        message: "Section not found"
+      });
+    }
+
+    const rowDoc = sectionDoc.rows.id(row_id);
+    if (!rowDoc) {
+      return res.status(404).json({
+        success: false,
+        message: "Row not found"
+      });
+    }
 
     if (rowDoc.bookedSeats + qty > rowDoc.totalSeats) {
       return res.status(409).json({
@@ -97,8 +130,8 @@ export const purchase = async (req, res) => {
       },
       {
         arrayFilters: [
-          { "s.name": section },
-          { "r.name": row }
+          { "s._id": section_id },
+          { "r._id": row_id }
         ]
       }
     );
@@ -112,14 +145,15 @@ export const purchase = async (req, res) => {
 
     const updatedEvent = await Event.findById(eventId);
 
+    const updatedSection = updatedEvent.sections.id(section_id);
+    const updatedRow = updatedSection.rows.id(row_id);
+
     io.to(eventId).emit("ticket-updated", {
       eventId,
-      section,
-      row,
-      bookedSeats: updatedEvent.sections
-        .find(s => s.name === section)
-        .rows.find(r => r.name === row).bookedSeats,
-      totalSeats: rowDoc.totalSeats
+      section_id,
+      row_id,
+      bookedSeats: updatedRow.bookedSeats,
+      totalSeats: updatedRow.totalSeats
     });
 
     const groupDiscount = qty >= 4;
@@ -127,10 +161,19 @@ export const purchase = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Seats booked successfully",
-      data: {section,row,quantity: qty,groupDiscount}
+      data: {
+        section_id,
+        row_id,
+        quantity: qty,
+        groupDiscount
+      }
     });
 
   } catch (error) {
-    return res.status(500).json({success: false,message: "Internal server error"});
+    console.error("Purchase error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
   }
 };

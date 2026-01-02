@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import EventList from "./components/EventList";
-import EventDetail from "./components/EventDetail";
+import EventList from "./components/events/EventList";
+import EventDetail from "./components/events/EventDetail";
 import NotFound from "./components/NotFound";
 function App() {
   return (
