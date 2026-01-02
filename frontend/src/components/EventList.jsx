@@ -13,7 +13,7 @@ export default function Home() {
         const res = await axios.get(`${API_URL}/events`);
         if(res.status==200 && res.data.success==true)
         {
-            setEvents(res.data.events);
+            setEvents(res.data.data);
         }       
         
       } catch (error) {

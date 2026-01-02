@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
+import { socket } from "../socket";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -37,7 +38,19 @@ export default function EventDetail() {
             setLoading(false);
         }
     };
+    useEffect(() => {
+      socket.emit("join-event", id);
+      socket.on("ticket-updated", (data) => {
+        if (data.eventId === id) {
+          fetchAvailability(); // refresh availability automatically
+        }
+      });
 
+      return () => {
+        socket.off("ticket-updated");
+      };
+    }, [id]);
+    
     useEffect(() => {
         fetchAvailability();
     }, [id]);
@@ -91,6 +104,7 @@ export default function EventDetail() {
     return <p className="text-center mt-4">Loading availability...</p>;
   }
 
+  
   return (
     <div className="container mt-4">
       

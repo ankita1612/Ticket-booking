@@ -1,161 +1,61 @@
 import dotenv from "dotenv";
-dotenv.config(); 
+dotenv.config();
 console.log("Loaded MONGO_URI:", process.env.MONGO_URI);
 
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
 import helmet from "helmet";
-import path from "path";
-import { fileURLToPath } from "url";
-import Event from "./models/Event.js";
+import http from "http";
+import { Server } from "socket.io";
+import connectDB from "./src/config/db.js";
+import eventRoutes from "./src/routes/event.js";
+
 const app = express();
+
 app.use(cors());
 app.use(express.json());
-app.use(helmet())
+app.use(helmet());
 app.use(express.urlencoded({ extended: true }));
-// Connect to MongoDB
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB connected"))
-  .catch((err) => console.log(err));
 
-// Routes
-app.post("/events", async (req, res) => {
-  try {
-    const event = await Event.create(req.body);
-    res.status(200).json(event);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
+connectDB();
+
+app.use("/events", eventRoutes);
+
+const server = http.createServer(app);
+
+export const io = new Server(server, {
+  cors: {
+    origin: "*", // update in production
+    methods: ["GET", "POST"]
   }
 });
 
-//event lists
-app.get("/events", async (req, res) => {
-  const events = await Event.find({});
-  res.json({success:true,"events":events});
+io.on("connection", (socket) => {
+  //console.log("Socket connected:", socket.id);
+
+  socket.on("join-event", (eventId) => {
+    socket.join(eventId);
+    console.log(`Socket ${socket.id} joined event ${eventId}`);
+  });
+
+  socket.on("disconnect", () => {
+    //console.log("Socket disconnected:", socket.id);
+  });
 });
 
-// availability
-app.get("/events/:id/availability", async (req, res) => {
-  try {
-    const event = await Event.findById(req.params.id).lean();
-    if (!event) return res.status(404).json({ message: "Event not found" });
+// // Serve frontend
+// const __filename = fileURLToPath(import.meta.url);
+// const __dirname = path.dirname(__filename);
 
-    res.json(event.sections.map((sec) => ({
-      name: sec.name,
-      rows: sec.rows.map((row) => ({
-        name: row.name,
-        availableSeats: row.totalSeats - row.bookedSeats,
-      })),
-    })));
-  } catch (err) {
-    res.status(400).json({ message: "Invalid ID" });
-  }
-});
+// const frontendPath = path.join(__dirname, "../frontend/dist");
 
-//purchase
-app.post("/events/:id/purchase", async (req, res) => {
-  try {
-    const { section, row, quantity } = req.body;    
-    const eventId = req.params.id;
+// app.use(express.static(frontendPath));
 
-    if (!section || !row || !quantity) {
-      return res.status(400).json({
-        success: false,
-        message: "section, row and quantity are required"
-      });
-    }
-
-    const qty = Number(quantity);
-    if (isNaN(qty) || qty <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: "quantity must be a positive number"
-      });
-    }
-
-    const eventCheck = await Event.findOne({
-      _id: eventId,
-      sections: {
-        $elemMatch: {
-          name: section,
-          rows: { $elemMatch: { name: row } }
-        }
-      }
-    });
-
-    if (!eventCheck) {
-      return res.status(404).json({
-        success: false,
-        message: "Invalid section or row"
-      });
-    }
-
-    const sectionDoc = eventCheck.sections.find(s => s.name === section);
-    const rowDoc = sectionDoc.rows.find(r => r.name === row);
-
-    if (rowDoc.bookedSeats + qty > rowDoc.totalSeats) {
-      return res.status(409).json({
-        success: false,
-        message: "Not enough seats available"
-      });
-    }
-
-    const updateResult = await Event.updateOne(
-      { _id: eventId },
-      {
-        $inc: {
-          "sections.$[s].rows.$[r].bookedSeats": qty
-        }
-      },
-      {
-        arrayFilters: [
-          { "s.name": section },
-          { "r.name": row }
-        ]
-      }
-    );
-
-    if (updateResult.modifiedCount === 0) {
-      return res.status(409).json({
-        success: false,
-        message: "Booking failed. Please try again."
-      });
-    }
-
-    const groupDiscount = qty >= 4;
-
-    return res.status(200).json({
-      success: true,
-      message: "Seats booked successfully",
-      data: {
-        section,
-        row,
-        quantity: qty,
-        groupDiscount
-      }
-    });
-
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error"
-    });
-  }
-});
-
-// Serve frontend
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const frontendPath = path.join(__dirname, "../frontend/dist");
-
-app.use(express.static(frontendPath));
-
-app.get(/.*/, (req, res) => {
-    res.sendFile(path.join(frontendPath, "index.html"));
-});
-
+// app.get(/.*/, (req, res) => {
+//     res.sendFile(path.join(frontendPath, "index.html"));
+// });
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Listening on ${PORT}`));
+server.listen(PORT, () => {
+  //console.log(`Listening on ${PORT}`);
+});
