@@ -56,7 +56,7 @@ export default function EventDetail() {
       setAvailability(res.data);
     } catch (error) {      
       console.error("Failed to load availability", error);
-      if (error.response?.status === 404) {
+      if (error.response?.status === 404 || error.response?.status === 400) {
         navigate("/");
       }        
     } finally {
