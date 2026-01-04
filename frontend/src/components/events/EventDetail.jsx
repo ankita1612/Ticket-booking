@@ -2,7 +2,7 @@ import { useParams } from "react-router-dom";
 import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import { socket } from "../../socket";
-
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import { ticketSchema } from "../validations/event";
@@ -11,7 +11,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 export default function EventDetail() {
   const { id } = useParams();
-
+  const navigate = useNavigate();
   const [availability, setAvailability] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -54,8 +54,11 @@ export default function EventDetail() {
         `${API_URL}/events/${id}/availability`
       );
       setAvailability(res.data);
-    } catch (error) {
+    } catch (error) {      
       console.error("Failed to load availability", error);
+      if (error.response?.status === 404) {
+        navigate("/");
+      }        
     } finally {
       setLoading(false);
     }

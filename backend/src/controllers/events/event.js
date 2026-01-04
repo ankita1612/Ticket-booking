@@ -1,5 +1,5 @@
 import Event from "../../models/Event.js"
-import { io } from "../../../server.js";
+import { getIO } from "../../socket/index.js";
 import { validationResult } from "express-validator";
 
 // create event
@@ -152,7 +152,8 @@ export const purchase = async (req, res) => {
 
     const updatedSection = updatedEvent.sections.id(section_id);
     const updatedRow = updatedSection.rows.id(row_id);
-
+    
+    const io = getIO();
     io.to(eventId).emit("ticket-updated", {
       eventId,
       section_id,
